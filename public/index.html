@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intellectus — Envio de Campanhas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f5f7fa;
+      --surface:  #ffffff;
+      --border:   #e2e6ef;
+      --border-h: #c8d0e0;
+      --text:     #1a2035;
+      --muted:    #7a8499;
+      --accent:   #2d6ef7;
+      --accent-h: #1a5ae0;
+      --success:  #16a34a;
+      --warning:  #d97706;
+      --error:    #dc2626;
+      --radius:   10px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 32px 16px 64px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 580px;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 32px;
+    }
+    .header-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(45,110,247,.08);
+      border: 1px solid rgba(45,110,247,.2);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      letter-spacing: -.02em;
+      line-height: 1.2;
+    }
+    .header p {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Form elements */
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    select, input[type="number"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color .15s;
+      appearance: none;
+      cursor: pointer;
+    }
+    select:hover, input[type="number"]:hover { border-color: var(--border-h); }
+    select:focus, input[type="number"]:focus { border-color: var(--accent); }
+    select option { background: #ffffff; color: var(--text); }
+
+    .select-wrap {
+      position: relative;
+      margin-bottom: 16px;
+    }
+    .select-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      pointer-events: none;
+      font-size: 12px;
+    }
+    select.has-value { color: var(--text); }
+    select:not(.has-value) { color: var(--muted); }
+
+    /* Mode toggle */
+    .mode-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .mode-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 10px;
+      cursor: pointer;
+      transition: all .15s;
+      text-align: center;
+    }
+    .mode-btn:hover { border-color: var(--border-h); color: var(--text); }
+    .mode-btn.active {
+      background: rgba(45,110,247,.08);
+      border-color: rgba(45,110,247,.4);
+      color: var(--accent);
+    }
+
+    /* Area selector (shown only in area mode) */
+    #area-group { display: none; }
+    #area-group.visible { display: block; }
+
+    /* Hours row */
+    .hours-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hours-row input { width: 80px; margin-bottom: 0; }
+    .hours-row span { font-size: 13px; color: var(--muted); }
+
+    /* Summary */
+    .summary {
+      background: rgba(45,110,247,.05);
+      border: 1px solid rgba(45,110,247,.12);
+      border-radius: 6px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin-top: 4px;
+      min-height: 44px;
+    }
+    .summary strong { color: var(--text); }
+
+    /* Send button */
+    .btn-send {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 14px;
+      cursor: pointer;
+      transition: all .15s;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-send:hover:not(:disabled) { background: var(--accent-h); transform: translateY(-1px); }
+    .btn-send:active:not(:disabled) { transform: translateY(0); }
+    .btn-send:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* Feedback */
+    .feedback {
+      display: none;
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-top: 16px;
+      border: 1px solid;
+    }
+    .feedback.show { display: flex; align-items: flex-start; gap: 12px; }
+    .feedback.success { background: rgba(22,163,74,.07);  border-color: rgba(22,163,74,.25);  color: #15803d; }
+    .feedback.error   { background: rgba(220,38,38,.07);  border-color: rgba(220,38,38,.25);  color: #b91c1c; }
+    .feedback.loading { background: rgba(45,110,247,.07); border-color: rgba(45,110,247,.25); color: #1d4ed8; }
+    .feedback-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+    .feedback-text strong { display: block; margin-bottom: 3px; }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .stat {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--accent);
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .skeleton {
+      background: linear-gradient(90deg, var(--border) 25%, var(--border-h) 50%, var(--border) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
+      height: 14px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Spinner */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(45,110,247,.2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-badge">⚡ Intellectus CRM</div>
+    <h1>Envio de Campanhas</h1>
+    <p>Seleccione a campanha, o segmento e inicie o envio. O processo corre automaticamente em segundo plano.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="card" id="stats-card">
+    <div class="card-title">Base de Contactos</div>
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value" id="stat-total">—</div>
+        <div class="stat-label">Total CRM</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-enviavel">—</div>
+        <div class="stat-label">Enviáveis</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value" id="stat-batches">—</div>
+        <div class="stat-label">Batches</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="card">
+    <div class="card-title">Configuração do Envio</div>
+
+    <!-- Campanha -->
+    <div class="select-wrap">
+      <label for="sel-campaign">Campanha</label>
+      <select id="sel-campaign" onchange="updateSummary()">
+        <option value="">A carregar campanhas...</option>
+      </select>
+    </div>
+
+    <!-- Mailing List -->
+    <div class="select-wrap">
+      <label for="sel-list">Lista de Envio</label>
+      <select id="sel-list" onchange="updateSummary()">
+        <option value="">A carregar listas...</option>
+      </select>
+    </div>
+
+    <!-- Modo -->
+    <label>Modo de Envio</label>
+    <div class="mode-toggle">
+      <button class="mode-btn active" onclick="setMode('broadcast')" id="btn-broadcast">
+        📡 Broadcast<br><small style="font-weight:400;opacity:.7">Toda a base</small>
+      </button>
+      <button class="mode-btn" onclick="setMode('area')" id="btn-area">
+        🎯 Por Área<br><small style="font-weight:400;opacity:.7">Segmento específico</small>
+      </button>
+    </div>
+
+    <!-- Área (só visível em modo area) -->
+    <div id="area-group" class="select-wrap">
+      <label for="sel-area">Área de Formação</label>
+      <select id="sel-area" onchange="updateSummary()">
+        <option value="">Seleccionar área...</option>
+      </select>
+    </div>
+
+    <!-- Horas entre batches -->
+    <label style="margin-bottom:8px">Horas entre batches</label>
+    <div class="hours-row" style="margin-bottom:16px">
+      <input type="number" id="inp-hours" value="3" min="1" max="24" onchange="updateSummary()">
+      <span>horas (só relevante em broadcast com múltiplos batches)</span>
+    </div>
+
+    <!-- Resumo -->
+    <div class="summary" id="summary">
+      Seleccione uma campanha e uma lista para ver o resumo.
+    </div>
+  </div>
+
+  <!-- Botão de envio -->
+  <button class="btn-send" id="btn-send" onclick="sendCampaign()" disabled>
+    <span>Iniciar Envio</span>
+  </button>
+
+  <!-- Feedback -->
+  <div class="feedback" id="feedback">
+    <div class="feedback-icon" id="feedback-icon"></div>
+    <div class="feedback-text" id="feedback-text"></div>
+  </div>
+
+</div>
+
+<script>
+  let currentMode = 'broadcast';
+  let appData = null;
+
+  // ─── Carregar dados ao iniciar ──────────────────────────────────────────
+  async function loadData() {
+    try {
+      const r = await fetch('/api/data');
+      appData = await r.json();
+
+      // Campanhas
+      const selCampaign = document.getElementById('sel-campaign');
+      selCampaign.innerHTML = '<option value="">Seleccionar campanha...</option>';
+      if (appData.campaigns?.length) {
+        appData.campaigns.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.name + (c.subject ? ` — ${c.subject}` : '');
+          selCampaign.appendChild(opt);
+        });
+      } else {
+        selCampaign.innerHTML = '<option value="">Nenhuma campanha em Draft</option>';
+      }
+
+      // Listas
+      const selList = document.getElementById('sel-list');
+      selList.innerHTML = '<option value="">Seleccionar lista...</option>';
+      if (appData.mailing_lists?.length) {
+        appData.mailing_lists.forEach(l => {
+          const opt = document.createElement('option');
+          opt.value = l.key;
+          opt.textContent = `${l.name} (${Number(l.subscribers).toLocaleString('pt-PT')} subscritores)`;
+          selList.appendChild(opt);
+        });
+      } else {
+        selList.innerHTML = '<option value="">Nenhuma lista disponível</option>';
+      }
+
+      // Áreas
+      const selArea = document.getElementById('sel-area');
+      selArea.innerHTML = '<option value="">Seleccionar área...</option>';
+      (appData.areas || []).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.code;
+        opt.textContent = a.label;
+        selArea.appendChild(opt);
+      });
+
+      // Stats
+      document.getElementById('stat-total').textContent = '21.758';
+      document.getElementById('stat-enviavel').textContent = '21.611';
+      document.getElementById('stat-batches').textContent = currentMode === 'broadcast' ? '3' : '1';
+
+      updateSummary();
+    } catch (err) {
+      document.getElementById('sel-campaign').innerHTML = '<option value="">Erro ao carregar dados</option>';
+      showFeedback('error', 'Erro de ligação', 'Não foi possível carregar os dados do n8n. Verifique se o workflow está activo.');
+    }
+  }
+
+  // ─── Modo broadcast / area ─────────────────────────────────────────────
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('btn-broadcast').classList.toggle('active', mode === 'broadcast');
+    document.getElementById('btn-area').classList.toggle('active', mode === 'area');
+    document.getElementById('area-group').classList.toggle('visible', mode === 'area');
+    document.getElementById('stat-batches').textContent = mode === 'broadcast' ? '3' : '1';
+    updateSummary();
+  }
+
+  // ─── Resumo dinâmico ───────────────────────────────────────────────────
+  function updateSummary() {
+    const campaign = document.getElementById('sel-campaign').value;
+    const list     = document.getElementById('sel-list').value;
+    const area     = document.getElementById('sel-area').value;
+    const hours    = document.getElementById('inp-hours').value;
+    const btn      = document.getElementById('btn-send');
+    const summary  = document.getElementById('summary');
+
+    const campaignName = document.getElementById('sel-campaign').selectedOptions[0]?.text || '—';
+    const listName     = document.getElementById('sel-list').selectedOptions[0]?.text || '—';
+    const areaName     = document.getElementById('sel-area').selectedOptions[0]?.text || '—';
+
+    const ready = campaign && list && (currentMode === 'broadcast' || (currentMode === 'area' && area));
+    btn.disabled = !ready;
+
+    if (!ready) {
+      summary.innerHTML = 'Seleccione uma campanha e uma lista para ver o resumo.';
+      return;
+    }
+
+    if (currentMode === 'broadcast') {
+      summary.innerHTML = `
+        Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada para
+        <strong>~21.611 contactos</strong> em <strong>3 batches de ~7.000</strong>,
+        com <strong>${hours}h de intervalo</strong> entre cada envio.
+        Duração total estimada: <strong>${hours * 2}h a ${hours * 3}h</strong>.
+      `;
+    } else {
+      summary.innerHTML = `
+        Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada apenas para
+        contactos da área <strong>${areaName}</strong>.
+        Envio único, sem batches.
+      `;
+    }
+  }
+
+  // ─── Enviar campanha ────────────────────────────────────────────────────
+  async function sendCampaign() {
+    const campaign_id  = document.getElementById('sel-campaign').value;
+    const list_key     = document.getElementById('sel-list').value;
+    const area         = document.getElementById('sel-area').value;
+    const hours_between = parseInt(document.getElementById('inp-hours').value) || 3;
+    const campaignName  = document.getElementById('sel-campaign').selectedOptions[0]?.text.split('—')[0].trim();
+
+    document.getElementById('btn-send').disabled = true;
+    showFeedback('loading', 'A iniciar envio...', `A comunicar com o n8n para iniciar a campanha <strong>${campaignName}</strong>.`);
+
+    try {
+      const r = await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaign_id, list_key, mode: currentMode, area, hours_between })
+      });
+      const data = await r.json();
+
+      if (data.ok) {
+        showFeedback('success', '✅ Campanha iniciada com sucesso',
+          `O workflow de envio está a correr em segundo plano.<br>
+           <strong>Modo:</strong> ${currentMode === 'broadcast' ? 'Broadcast (toda a base)' : `Área: ${document.getElementById('sel-area').selectedOptions[0]?.text}`}<br>
+           <strong>Campanha:</strong> ${campaignName}<br>
+           Podes fechar esta janela — o envio continua automaticamente.`);
+      } else {
+        showFeedback('error', '❌ Erro ao iniciar', data.error || 'Erro desconhecido.');
+        document.getElementById('btn-send').disabled = false;
+      }
+    } catch (err) {
+      showFeedback('error', '❌ Erro de ligação', err.message);
+      document.getElementById('btn-send').disabled = false;
+    }
+  }
+
+  // ─── Feedback ──────────────────────────────────────────────────────────
+  function showFeedback(type, title, body) {
+    const el   = document.getElementById('feedback');
+    const icon = document.getElementById('feedback-icon');
+    const text = document.getElementById('feedback-text');
+    const icons = { success: '✅', error: '❌', loading: '' };
+
+    el.className = `feedback show ${type}`;
+    icon.innerHTML = type === 'loading' ? '<div class="spinner"></div>' : icons[type];
+    text.innerHTML = `<strong>${title}</strong>${body ? `<span>${body}</span>` : ''}`;
+  }
+
+  // ─── Init ───────────────────────────────────────────────────────────────
+  loadData();
+</script>
+</body>
+</html>
