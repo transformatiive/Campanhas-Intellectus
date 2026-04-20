@@ -372,12 +372,17 @@
 
   // ─── Carregar dados ao iniciar ──────────────────────────────────────────
   async function loadData() {
+    const selCampaign = document.getElementById('sel-campaign');
+    selCampaign.innerHTML = '<option value="">A carregar campanhas...</option>';
+
     try {
       const r = await fetch('/api/data');
+      if (!r.ok) throw new Error(`Servidor respondeu com erro ${r.status}`);
       appData = await r.json();
 
+      if (!appData.ok) throw new Error(appData.error || 'Resposta inválida do n8n');
+
       // Campanhas
-      const selCampaign = document.getElementById('sel-campaign');
       selCampaign.innerHTML = '<option value="">Seleccionar campanha...</option>';
       if (appData.campaigns?.length) {
         appData.campaigns.forEach(c => {
@@ -387,7 +392,7 @@
           selCampaign.appendChild(opt);
         });
       } else {
-        selCampaign.innerHTML = '<option value="">Nenhuma campanha em Draft</option>';
+        selCampaign.innerHTML = '<option value="">Nenhuma campanha disponível</option>';
       }
 
       // Áreas
@@ -400,15 +405,19 @@
         selArea.appendChild(opt);
       });
 
-      // Stats
-      document.getElementById('stat-total').textContent = '21.758';
-      document.getElementById('stat-enviavel').textContent = '21.611';
-      document.getElementById('stat-batches').textContent = currentMode === 'broadcast' ? '3' : '1';
+      // Stats dinâmicos do CRM
+      const stats = appData.stats || {};
+      const fmt = n => (n || 0).toLocaleString('pt-PT');
+      document.getElementById('stat-total').textContent    = fmt(stats.total);
+      document.getElementById('stat-enviavel').textContent = fmt(stats.enviavel);
+      document.getElementById('stat-batches').textContent  = currentMode === 'broadcast' ? (stats.batches || '—') : '1';
 
       updateSummary();
+
     } catch (err) {
-      document.getElementById('sel-campaign').innerHTML = '<option value="">Erro ao carregar dados</option>';
-      showFeedback('error', 'Erro de ligação', 'Não foi possível carregar os dados do n8n. Verifique se o workflow está activo.');
+      selCampaign.innerHTML = '<option value="">Erro ao carregar campanhas</option>';
+      showFeedback('error', 'Erro de ligação ao n8n',
+        `Não foi possível carregar as campanhas: <em>${err.message}</em>. Verifique se o workflow "INTELLECTUS — Campanhas: API Dados" está activo no n8n e tente recarregar a página.`);
     }
   }
 
@@ -418,7 +427,7 @@
     document.getElementById('btn-broadcast').classList.toggle('active', mode === 'broadcast');
     document.getElementById('btn-area').classList.toggle('active', mode === 'area');
     document.getElementById('area-group').classList.toggle('visible', mode === 'area');
-    document.getElementById('stat-batches').textContent = mode === 'broadcast' ? '3' : '1';
+    document.getElementById('stat-batches').textContent = mode === 'broadcast' ? (appData?.stats?.batches || '—') : '1';
     updateSummary();
   }
 
@@ -442,11 +451,14 @@
     }
 
     if (currentMode === 'broadcast') {
+      const enviavel = (appData?.stats?.enviavel || 0).toLocaleString('pt-PT');
+      const batches  = appData?.stats?.batches || 1;
+      const perBatch = Math.ceil((appData?.stats?.enviavel || 0) / batches).toLocaleString('pt-PT');
       summary.innerHTML = `
         Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada para
-        <strong>~21.611 contactos</strong> em <strong>3 batches de ~7.000</strong>,
+        <strong>~${enviavel} contactos</strong> em <strong>${batches} batches de ~${perBatch}</strong>,
         com <strong>${hours}h de intervalo</strong> entre cada envio.
-        Duração total estimada: <strong>${hours * 2}h a ${hours * 3}h</strong>.
+        Duração total estimada: <strong>${hours * (batches - 1)}h a ${hours * batches}h</strong>.
       `;
     } else {
       summary.innerHTML = `
