@@ -321,14 +321,6 @@
       </select>
     </div>
 
-    <!-- Mailing List -->
-    <div class="select-wrap">
-      <label for="sel-list">Lista de Envio</label>
-      <select id="sel-list" onchange="updateSummary()">
-        <option value="">A carregar listas...</option>
-      </select>
-    </div>
-
     <!-- Modo -->
     <label>Modo de Envio</label>
     <div class="mode-toggle">
@@ -398,20 +390,6 @@
         selCampaign.innerHTML = '<option value="">Nenhuma campanha em Draft</option>';
       }
 
-      // Listas
-      const selList = document.getElementById('sel-list');
-      selList.innerHTML = '<option value="">Seleccionar lista...</option>';
-      if (appData.mailing_lists?.length) {
-        appData.mailing_lists.forEach(l => {
-          const opt = document.createElement('option');
-          opt.value = l.key;
-          opt.textContent = `${l.name} (${Number(l.subscribers).toLocaleString('pt-PT')} subscritores)`;
-          selList.appendChild(opt);
-        });
-      } else {
-        selList.innerHTML = '<option value="">Nenhuma lista disponível</option>';
-      }
-
       // Áreas
       const selArea = document.getElementById('sel-area');
       selArea.innerHTML = '<option value="">Seleccionar área...</option>';
@@ -447,21 +425,19 @@
   // ─── Resumo dinâmico ───────────────────────────────────────────────────
   function updateSummary() {
     const campaign = document.getElementById('sel-campaign').value;
-    const list     = document.getElementById('sel-list').value;
     const area     = document.getElementById('sel-area').value;
     const hours    = document.getElementById('inp-hours').value;
     const btn      = document.getElementById('btn-send');
     const summary  = document.getElementById('summary');
 
     const campaignName = document.getElementById('sel-campaign').selectedOptions[0]?.text || '—';
-    const listName     = document.getElementById('sel-list').selectedOptions[0]?.text || '—';
     const areaName     = document.getElementById('sel-area').selectedOptions[0]?.text || '—';
 
-    const ready = campaign && list && (currentMode === 'broadcast' || (currentMode === 'area' && area));
+    const ready = campaign && (currentMode === 'broadcast' || (currentMode === 'area' && area));
     btn.disabled = !ready;
 
     if (!ready) {
-      summary.innerHTML = 'Seleccione uma campanha e uma lista para ver o resumo.';
+      summary.innerHTML = 'Seleccione uma campanha para ver o resumo.';
       return;
     }
 
@@ -483,9 +459,8 @@
 
   // ─── Enviar campanha ────────────────────────────────────────────────────
   async function sendCampaign() {
-    const campaign_id  = document.getElementById('sel-campaign').value;
-    const list_key     = document.getElementById('sel-list').value;
-    const area         = document.getElementById('sel-area').value;
+    const campaign_id   = document.getElementById('sel-campaign').value;
+    const area          = document.getElementById('sel-area').value;
     const hours_between = parseInt(document.getElementById('inp-hours').value) || 3;
     const campaignName  = document.getElementById('sel-campaign').selectedOptions[0]?.text.split('—')[0].trim();
 
@@ -496,7 +471,7 @@
       const r = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign_id, list_key, mode: currentMode, area, hours_between })
+        body: JSON.stringify({ campaign_id, list_name: 'Envios Automaticos', mode: currentMode, area, hours_between })
       });
       const data = await r.json();
 
@@ -505,7 +480,7 @@
           `O workflow de envio está a correr em segundo plano.<br>
            <strong>Modo:</strong> ${currentMode === 'broadcast' ? 'Broadcast (toda a base)' : `Área: ${document.getElementById('sel-area').selectedOptions[0]?.text}`}<br>
            <strong>Campanha:</strong> ${campaignName}<br>
-           Podes fechar esta janela — o envio continua automaticamente.`);
+           Pode fechar esta janela — o envio continua automaticamente.`);
       } else {
         showFeedback('error', '❌ Erro ao iniciar', data.error || 'Erro desconhecido.');
         document.getElementById('btn-send').disabled = false;
