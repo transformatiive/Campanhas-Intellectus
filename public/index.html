@@ -379,7 +379,7 @@
   <div class="loading-steps">
     <div class="loading-step active" id="step-connect">
       <div class="step-dot"></div>
-      A ligar ao n8n
+      A estabelecer ligação
     </div>
     <div class="loading-step" id="step-campaigns">
       <div class="step-dot"></div>
@@ -515,7 +515,7 @@
       stepActive('step-campaigns');
 
       appData = await r.json();
-      if (!appData.ok) throw new Error(appData.error || 'Resposta inválida do n8n');
+      if (!appData.ok) throw new Error(appData.error || 'Não foi possível obter os dados.');
 
       // Passo 2 — Campanhas
       selCampaign.innerHTML = '<option value="">Seleccionar campanha...</option>';
@@ -559,8 +559,8 @@
     } catch (err) {
       selCampaign.innerHTML = '<option value="">Erro ao carregar campanhas</option>';
       revealApp();
-      showFeedback('error', 'Erro de ligação ao n8n',
-        `Não foi possível carregar as campanhas: <em>${err.message}</em>. Verifique se o workflow "INTELLECTUS — Campanhas: API Dados" está activo no n8n e tente recarregar a página.`);
+      showFeedback('error', 'Não foi possível carregar os dados',
+        `Ocorreu um erro ao obter as campanhas e contactos. Por favor tente recarregar a página. Se o problema persistir, contacte o suporte.`);
     }
   }
 
@@ -620,7 +620,7 @@
     const campaignName  = document.getElementById('sel-campaign').selectedOptions[0]?.text.split('—')[0].trim();
 
     document.getElementById('btn-send').disabled = true;
-    showFeedback('loading', 'A iniciar envio...', `A comunicar com o n8n para iniciar a campanha <strong>${campaignName}</strong>.`);
+    showFeedback('loading', 'A iniciar envio…', `A processar o pedido para a campanha <strong>${campaignName}</strong>. Aguarde um momento.`);
 
     try {
       const r = await fetch('/api/send', {
