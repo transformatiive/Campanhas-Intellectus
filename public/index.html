@@ -279,10 +279,120 @@
       flex-shrink: 0;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Loading overlay */
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      gap: 24px;
+      transition: opacity .4s ease;
+    }
+    #loading-overlay.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .loading-logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(45,110,247,.08);
+      border: 1px solid rgba(45,110,247,.2);
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 4px;
+    }
+    .loading-ring {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(45,110,247,.15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+    }
+    .loading-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -.01em;
+    }
+    .loading-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .loading-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      transition: color .3s;
+    }
+    .loading-step.active { color: var(--accent); }
+    .loading-step.done   { color: var(--success); }
+    .step-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border);
+      flex-shrink: 0;
+      transition: background .3s;
+    }
+    .loading-step.active .step-dot {
+      background: var(--accent);
+      box-shadow: 0 0 0 3px rgba(45,110,247,.2);
+      animation: pulse-dot 1s ease-in-out infinite;
+    }
+    .loading-step.done .step-dot { background: var(--success); }
+    @keyframes pulse-dot {
+      0%, 100% { box-shadow: 0 0 0 3px rgba(45,110,247,.2); }
+      50%       { box-shadow: 0 0 0 6px rgba(45,110,247,.08); }
+    }
+
+    /* Main content hidden until ready */
+    #main-content {
+      opacity: 0;
+      transition: opacity .5s ease;
+    }
+    #main-content.visible { opacity: 1; }
   </style>
 </head>
 <body>
-<div class="container">
+
+<!-- Loading overlay -->
+<div id="loading-overlay">
+  <div class="loading-logo">⚡ Intellectus CRM</div>
+  <div class="loading-ring"></div>
+  <div class="loading-title">A preparar o painel…</div>
+  <div class="loading-steps">
+    <div class="loading-step active" id="step-connect">
+      <div class="step-dot"></div>
+      A ligar ao n8n
+    </div>
+    <div class="loading-step" id="step-campaigns">
+      <div class="step-dot"></div>
+      A carregar campanhas
+    </div>
+    <div class="loading-step" id="step-contacts">
+      <div class="step-dot"></div>
+      A obter base de contactos
+    </div>
+  </div>
+</div>
+
+<div class="container" id="main-content">
 
   <div class="header">
     <div class="header-badge">⚡ Intellectus CRM</div>
@@ -366,9 +476,30 @@
 
 </div>
 
+
 <script>
   let currentMode = 'broadcast';
   let appData = null;
+
+  // ─── Helpers para os passos do loading ─────────────────────────────────
+  function stepDone(id) {
+    const el = document.getElementById(id);
+    el.classList.remove('active');
+    el.classList.add('done');
+    const dot = el.querySelector('.step-dot');
+    if (dot) dot.outerHTML = '<span style="font-size:14px;line-height:1;color:var(--success)">✓</span>';
+  }
+  function stepActive(id) {
+    const el = document.getElementById(id);
+    el.classList.add('active');
+  }
+  function revealApp() {
+    const overlay = document.getElementById('loading-overlay');
+    const main    = document.getElementById('main-content');
+    overlay.classList.add('fade-out');
+    setTimeout(() => { overlay.style.display = 'none'; }, 450);
+    main.classList.add('visible');
+  }
 
   // ─── Carregar dados ao iniciar ──────────────────────────────────────────
   async function loadData() {
@@ -376,13 +507,17 @@
     selCampaign.innerHTML = '<option value="">A carregar campanhas...</option>';
 
     try {
+      // Passo 1 — ligar ao n8n
       const r = await fetch('/api/data');
       if (!r.ok) throw new Error(`Servidor respondeu com erro ${r.status}`);
-      appData = await r.json();
 
+      stepDone('step-connect');
+      stepActive('step-campaigns');
+
+      appData = await r.json();
       if (!appData.ok) throw new Error(appData.error || 'Resposta inválida do n8n');
 
-      // Campanhas
+      // Passo 2 — Campanhas
       selCampaign.innerHTML = '<option value="">Seleccionar campanha...</option>';
       if (appData.campaigns?.length) {
         appData.campaigns.forEach(c => {
@@ -392,10 +527,13 @@
           selCampaign.appendChild(opt);
         });
       } else {
-        selCampaign.innerHTML = '<option value="">Nenhuma campanha disponível</option>';
+        selCampaign.innerHTML = '<option value="">Nenhuma campanha em Draft</option>';
       }
 
-      // Áreas
+      stepDone('step-campaigns');
+      stepActive('step-contacts');
+
+      // Passo 3 — Áreas e stats
       const selArea = document.getElementById('sel-area');
       selArea.innerHTML = '<option value="">Seleccionar área...</option>';
       (appData.areas || []).forEach(a => {
@@ -405,17 +543,22 @@
         selArea.appendChild(opt);
       });
 
-      // Stats dinâmicos do CRM
       const stats = appData.stats || {};
       const fmt = n => (n || 0).toLocaleString('pt-PT');
       document.getElementById('stat-total').textContent    = fmt(stats.total);
       document.getElementById('stat-enviavel').textContent = fmt(stats.enviavel);
       document.getElementById('stat-batches').textContent  = currentMode === 'broadcast' ? (stats.batches || '—') : '1';
 
+      stepDone('step-contacts');
       updateSummary();
+
+      // Pequena pausa para o utilizador ver os passos completos
+      await new Promise(r => setTimeout(r, 400));
+      revealApp();
 
     } catch (err) {
       selCampaign.innerHTML = '<option value="">Erro ao carregar campanhas</option>';
+      revealApp();
       showFeedback('error', 'Erro de ligação ao n8n',
         `Não foi possível carregar as campanhas: <em>${err.message}</em>. Verifique se o workflow "INTELLECTUS — Campanhas: API Dados" está activo no n8n e tente recarregar a página.`);
     }
