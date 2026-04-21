@@ -15,7 +15,7 @@ const SEND_WEBHOOK  = `${N8N_BASE}/webhook/intellectus-campaigns-send`;
 // GET /api/data — busca campanhas, listas e áreas via n8n
 app.get('/api/data', async (req, res) => {
   try {
-    const r = await fetch(DATA_WEBHOOK, { timeout: 15000 });
+    const r = await fetch(DATA_WEBHOOK, { timeout: 30000 });
     const data = await r.json();
     res.json(data);
   } catch (err) {

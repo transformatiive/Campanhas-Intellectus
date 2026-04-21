@@ -559,8 +559,9 @@
     } catch (err) {
       selCampaign.innerHTML = '<option value="">Erro ao carregar campanhas</option>';
       revealApp();
-      showFeedback('error', 'Não foi possível carregar os dados',
-        `Ocorreu um erro ao obter as campanhas e contactos. Por favor tente recarregar a página. Se o problema persistir, contacte o suporte.`);
+      showFeedback('error', 'Serviço temporariamente indisponível',
+        `Não foi possível obter as campanhas e contactos. O serviço de automação pode estar inativo ou a demorar mais do que o esperado.<br><br>
+         <strong>O que fazer:</strong> verifique se os workflows de automação estão ativos e tente recarregar a página.`);
     }
   }
 
