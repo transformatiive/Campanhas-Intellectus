@@ -465,6 +465,15 @@
       <span>horas (só relevante em broadcast com múltiplos batches)</span>
     </div>
 
+    <!-- Modo de teste (temporário) -->
+    <div style="background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.25);border-radius:6px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px">
+      <input type="checkbox" id="chk-test-mode" onchange="updateSummary()" style="margin-top:3px;cursor:pointer">
+      <label for="chk-test-mode" style="margin:0;color:var(--text);font-size:13px;cursor:pointer;line-height:1.5">
+        <strong style="color:#b45309">🧪 Modo de teste</strong><br>
+        <span style="color:var(--muted)">Envia apenas para contactos com a flag <code style="font-family:'DM Mono',monospace;font-size:12px">Temp_Campaign = true</code>. Use para testar sem impactar a base toda.</span>
+      </label>
+    </div>
+
     <!-- Resumo -->
     <div class="summary" id="summary">
       Seleccione uma campanha e uma lista para ver o resumo.
@@ -600,8 +609,22 @@
     document.getElementById('btn-broadcast').classList.toggle('active', mode === 'broadcast');
     document.getElementById('btn-area').classList.toggle('active', mode === 'area');
     document.getElementById('area-group').classList.toggle('visible', mode === 'area');
-    document.getElementById('stat-batches').textContent = mode === 'broadcast' ? (appData?.stats?.batches || '—') : '1';
+    refreshStats();
     updateSummary();
+  }
+
+  // ─── Refrescar stats em função do modo de teste ─────────────────────────
+  function refreshStats() {
+    const stats    = appData?.stats || {};
+    const testMode = document.getElementById('chk-test-mode')?.checked;
+    const fmt      = n => (n || 0).toLocaleString('pt-PT');
+    if (testMode) {
+      document.getElementById('stat-enviavel').textContent = fmt(stats.test_enviavel) + (stats.test_approx ? '+' : '');
+      document.getElementById('stat-batches').textContent  = stats.test_batches || 1;
+    } else {
+      document.getElementById('stat-enviavel').textContent = fmt(stats.enviavel);
+      document.getElementById('stat-batches').textContent  = currentMode === 'broadcast' ? (stats.batches || '—') : '1';
+    }
   }
 
   // ─── Resumo dinâmico ───────────────────────────────────────────────────
@@ -621,6 +644,25 @@
 
     if (!ready) {
       summary.innerHTML = 'Seleccione uma campanha para ver o resumo.';
+      return;
+    }
+
+    const testMode = document.getElementById('chk-test-mode').checked;
+    const testNote = testMode
+      ? ` <strong style="color:#b45309">🧪 Modo de teste activo</strong> — só contactos com <code>Temp_Campaign = true</code>.`
+      : '';
+
+    refreshStats();
+
+    if (testMode) {
+      const testCount = (appData?.stats?.test_enviavel || 0).toLocaleString('pt-PT');
+      const approx    = appData?.stats?.test_approx ? '+' : '';
+      const segNote   = currentMode === 'area' ? ` da área <strong>${areaName}</strong>` : '';
+      summary.innerHTML = `
+        Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada apenas para
+        <strong>${testCount}${approx} contactos${segNote}</strong> com a flag <code>Temp_Campaign = true</code>.
+        Envio único, sem batches.${testNote}
+      `;
       return;
     }
 
@@ -649,6 +691,7 @@
     const list_key      = document.getElementById('sel-list').value;
     const area          = document.getElementById('sel-area').value;
     const hours_between = parseInt(document.getElementById('inp-hours').value) || 3;
+    const test_mode     = document.getElementById('chk-test-mode').checked;
     const campaignName  = document.getElementById('sel-campaign').selectedOptions[0]?.text.split('—')[0].trim();
 
     document.getElementById('btn-send').disabled = true;
@@ -658,7 +701,7 @@
       const r = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign_id, list_key, mode: currentMode, area, hours_between })
+        body: JSON.stringify({ campaign_id, list_key, mode: currentMode, area, hours_between, test_mode })
       });
       const data = await r.json();
 

@@ -26,14 +26,14 @@ app.get('/api/data', async (req, res) => {
 
 // POST /api/send — dispara o envio via n8n
 app.post('/api/send', async (req, res) => {
-  const { campaign_id, list_key, mode, area, hours_between } = req.body;
+  const { campaign_id, list_key, mode, area, hours_between, test_mode } = req.body;
 
   if (!campaign_id || !list_key) {
     return res.status(400).json({ ok: false, error: 'campaign_id e list_key são obrigatórios' });
   }
 
   try {
-    const payload = { campaign_id, list_key, mode: mode || 'broadcast', area: area || '', hours_between: hours_between || 3 };
+    const payload = { campaign_id, list_key, mode: mode || 'broadcast', area: area || '', hours_between: hours_between || 3, test_mode: !!test_mode };
     const r = await fetch(SEND_WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
