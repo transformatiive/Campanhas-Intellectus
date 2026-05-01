@@ -465,6 +465,15 @@
       <span>horas (só relevante em broadcast com múltiplos batches)</span>
     </div>
 
+    <!-- Modo de teste (temporário) -->
+    <div style="background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.25);border-radius:6px;padding:12px 14px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px">
+      <input type="checkbox" id="chk-test-mode" onchange="updateSummary()" style="margin-top:3px;cursor:pointer">
+      <label for="chk-test-mode" style="margin:0;color:var(--text);font-size:13px;cursor:pointer;line-height:1.5">
+        <strong style="color:#b45309">🧪 Modo de teste</strong><br>
+        <span style="color:var(--muted)">Envia apenas para contactos com a flag <code style="font-family:'DM Mono',monospace;font-size:12px">Temp_Campaign = true</code>. Use para testar sem impactar a base toda.</span>
+      </label>
+    </div>
+
     <!-- Resumo -->
     <div class="summary" id="summary">
       Seleccione uma campanha e uma lista para ver o resumo.
@@ -624,6 +633,11 @@
       return;
     }
 
+    const testMode = document.getElementById('chk-test-mode').checked;
+    const testNote = testMode
+      ? ` <strong style="color:#b45309">🧪 Modo de teste activo</strong> — só contactos com <code>Temp_Campaign = true</code>.`
+      : '';
+
     if (currentMode === 'broadcast') {
       const enviavel = (appData?.stats?.enviavel || 0).toLocaleString('pt-PT');
       const batches  = appData?.stats?.batches || 1;
@@ -632,13 +646,13 @@
         Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada para
         <strong>~${enviavel} contactos</strong> em <strong>${batches} batches de ~${perBatch}</strong>,
         com <strong>${hours}h de intervalo</strong> entre cada envio.
-        Duração total estimada: <strong>${hours * (batches - 1)}h a ${hours * batches}h</strong>.
+        Duração total estimada: <strong>${hours * (batches - 1)}h a ${hours * batches}h</strong>.${testNote}
       `;
     } else {
       summary.innerHTML = `
         Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada apenas para
         contactos da área <strong>${areaName}</strong>.
-        Envio único, sem batches.
+        Envio único, sem batches.${testNote}
       `;
     }
   }
@@ -649,6 +663,7 @@
     const list_key      = document.getElementById('sel-list').value;
     const area          = document.getElementById('sel-area').value;
     const hours_between = parseInt(document.getElementById('inp-hours').value) || 3;
+    const test_mode     = document.getElementById('chk-test-mode').checked;
     const campaignName  = document.getElementById('sel-campaign').selectedOptions[0]?.text.split('—')[0].trim();
 
     document.getElementById('btn-send').disabled = true;
@@ -658,7 +673,7 @@
       const r = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign_id, list_key, mode: currentMode, area, hours_between })
+        body: JSON.stringify({ campaign_id, list_key, mode: currentMode, area, hours_between, test_mode })
       });
       const data = await r.json();
 
