@@ -609,8 +609,22 @@
     document.getElementById('btn-broadcast').classList.toggle('active', mode === 'broadcast');
     document.getElementById('btn-area').classList.toggle('active', mode === 'area');
     document.getElementById('area-group').classList.toggle('visible', mode === 'area');
-    document.getElementById('stat-batches').textContent = mode === 'broadcast' ? (appData?.stats?.batches || '—') : '1';
+    refreshStats();
     updateSummary();
+  }
+
+  // ─── Refrescar stats em função do modo de teste ─────────────────────────
+  function refreshStats() {
+    const stats    = appData?.stats || {};
+    const testMode = document.getElementById('chk-test-mode')?.checked;
+    const fmt      = n => (n || 0).toLocaleString('pt-PT');
+    if (testMode) {
+      document.getElementById('stat-enviavel').textContent = fmt(stats.test_enviavel) + (stats.test_approx ? '+' : '');
+      document.getElementById('stat-batches').textContent  = stats.test_batches || 1;
+    } else {
+      document.getElementById('stat-enviavel').textContent = fmt(stats.enviavel);
+      document.getElementById('stat-batches').textContent  = currentMode === 'broadcast' ? (stats.batches || '—') : '1';
+    }
   }
 
   // ─── Resumo dinâmico ───────────────────────────────────────────────────
@@ -638,6 +652,20 @@
       ? ` <strong style="color:#b45309">🧪 Modo de teste activo</strong> — só contactos com <code>Temp_Campaign = true</code>.`
       : '';
 
+    refreshStats();
+
+    if (testMode) {
+      const testCount = (appData?.stats?.test_enviavel || 0).toLocaleString('pt-PT');
+      const approx    = appData?.stats?.test_approx ? '+' : '';
+      const segNote   = currentMode === 'area' ? ` da área <strong>${areaName}</strong>` : '';
+      summary.innerHTML = `
+        Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada apenas para
+        <strong>${testCount}${approx} contactos${segNote}</strong> com a flag <code>Temp_Campaign = true</code>.
+        Envio único, sem batches.${testNote}
+      `;
+      return;
+    }
+
     if (currentMode === 'broadcast') {
       const enviavel = (appData?.stats?.enviavel || 0).toLocaleString('pt-PT');
       const batches  = appData?.stats?.batches || 1;
@@ -646,13 +674,13 @@
         Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada para
         <strong>~${enviavel} contactos</strong> em <strong>${batches} batches de ~${perBatch}</strong>,
         com <strong>${hours}h de intervalo</strong> entre cada envio.
-        Duração total estimada: <strong>${hours * (batches - 1)}h a ${hours * batches}h</strong>.${testNote}
+        Duração total estimada: <strong>${hours * (batches - 1)}h a ${hours * batches}h</strong>.
       `;
     } else {
       summary.innerHTML = `
         Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada apenas para
         contactos da área <strong>${areaName}</strong>.
-        Envio único, sem batches.${testNote}
+        Envio único, sem batches.
       `;
     }
   }
