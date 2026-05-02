@@ -622,9 +622,9 @@
         label.textContent    = 'Enviáveis (área)';
         batches.textContent  = calcBatches(areaCount);
       } else {
-        enviavel.textContent = areaCode ? '—' : fmt(stats.enviavel);
+        enviavel.textContent = fmt(stats.enviavel);
         label.textContent    = 'Enviáveis';
-        batches.textContent  = areaCode ? '—' : '1';
+        batches.textContent  = '1';
       }
     } else {
       enviavel.textContent = fmt(stats.enviavel);
@@ -687,7 +687,7 @@
       const areaBat   = areaCount !== null ? calcBatches(areaCount) : 1;
       const countStr  = areaCount !== null ? `<strong>~${areaCount.toLocaleString('pt-PT')} contactos</strong>` : 'contactos';
 
-      if (areaBat > 1) {
+      if (areaCount !== null && areaBat > 1) {
         const perBatch = Math.ceil(areaCount / areaBat).toLocaleString('pt-PT');
         summary.innerHTML = `
           Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada para
@@ -699,7 +699,7 @@
       } else {
         summary.innerHTML = `
           Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada apenas para
-          ${countStr} da área <strong>${areaName}</strong>.
+          contactos da área <strong>${areaName}</strong>${areaCount !== null ? ` (~${areaCount.toLocaleString('pt-PT')} contactos)` : ''}.
           Envio único, sem batches.
         `;
       }
