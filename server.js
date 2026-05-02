@@ -26,15 +26,32 @@ app.get('/api/data', async (req, res) => {
 
 // POST /api/send — dispara o envio via n8n
 app.post('/api/send', async (req, res) => {
-  const { campaign_id, list_key, mode, area, hours_between, test_mode } = req.body;
+  const {
+    campaign_key, campaign_id,
+    campaign_name, subject,
+    from_name, from_email, reply_to,
+    mode, area, hours_between, test_mode
+  } = req.body;
 
-  if (!campaign_id || !list_key) {
-    return res.status(400).json({ ok: false, error: 'campaign_id e list_key são obrigatórios' });
+  const key = campaign_key || campaign_id;
+  if (!key) {
+    return res.status(400).json({ ok: false, error: 'campaign_key é obrigatório' });
   }
 
   try {
-    const payload = { campaign_id, list_key, mode: mode || 'broadcast', area: area || '', hours_between: hours_between || 3, test_mode: !!test_mode };
-    const r = await fetch(SEND_WEBHOOK, {
+    const payload = {
+      campaign_key: key,
+      campaign_name: campaign_name || '',
+      subject: subject || campaign_name || '',
+      from_name: from_name || '',
+      from_email: from_email || '',
+      reply_to: reply_to || from_email || '',
+      mode: mode || 'broadcast',
+      area: area || '',
+      hours_between: typeof hours_between === 'number' ? hours_between : (parseInt(hours_between, 10) || 3),
+      test_mode: !!test_mode
+    };
+    await fetch(SEND_WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
