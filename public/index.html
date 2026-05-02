@@ -431,14 +431,6 @@
       </select>
     </div>
 
-    <!-- Lista de envio -->
-    <div class="select-wrap">
-      <label for="sel-list">Lista de Envio</label>
-      <select id="sel-list" onchange="updateSummary()">
-        <option value="">A carregar listas...</option>
-      </select>
-    </div>
-
     <!-- Modo -->
     <label>Modo de Envio</label>
     <div class="mode-toggle">
@@ -547,27 +539,6 @@
         selCampaign.innerHTML = '<option value="">Nenhuma campanha em Draft</option>';
       }
 
-      // Listas de envio
-      const selList = document.getElementById('sel-list');
-      selList.innerHTML = '';
-      const lists = appData.mailing_lists || [];
-      if (lists.length) {
-        if (lists.length > 1) {
-          const placeholder = document.createElement('option');
-          placeholder.value = '';
-          placeholder.textContent = 'Seleccionar lista...';
-          selList.appendChild(placeholder);
-        }
-        lists.forEach(l => {
-          const opt = document.createElement('option');
-          opt.value = l.key;
-          opt.textContent = l.name;
-          selList.appendChild(opt);
-        });
-      } else {
-        selList.innerHTML = '<option value="">Nenhuma lista disponível</option>';
-      }
-
       stepDone('step-campaigns');
       stepActive('step-contacts');
 
@@ -630,7 +601,6 @@
   // ─── Resumo dinâmico ───────────────────────────────────────────────────
   function updateSummary() {
     const campaign = document.getElementById('sel-campaign').value;
-    const list     = document.getElementById('sel-list').value;
     const area     = document.getElementById('sel-area').value;
     const hours    = document.getElementById('inp-hours').value;
     const btn      = document.getElementById('btn-send');
@@ -639,7 +609,7 @@
     const campaignName = document.getElementById('sel-campaign').selectedOptions[0]?.text || '—';
     const areaName     = document.getElementById('sel-area').selectedOptions[0]?.text || '—';
 
-    const ready = campaign && list && (currentMode === 'broadcast' || (currentMode === 'area' && area));
+    const ready = campaign && (currentMode === 'broadcast' || (currentMode === 'area' && area));
     btn.disabled = !ready;
 
     if (!ready) {
