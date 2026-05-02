@@ -584,6 +584,15 @@
     updateSummary();
   }
 
+  // ─── Calcular nº de batches para um dado count ─────────────────────────
+  function calcBatches(count) {
+    const stats     = appData?.stats || {};
+    const bcastEnv  = stats.enviavel || 0;
+    const bcastBat  = stats.batches  || 1;
+    const batchSize = bcastEnv > 0 ? Math.ceil(bcastEnv / bcastBat) : 9999;
+    return Math.max(1, Math.ceil(count / batchSize));
+  }
+
   // ─── Refrescar stats em função do modo e área ──────────────────────────
   function refreshStats() {
     const stats    = appData?.stats || {};
@@ -602,8 +611,8 @@
     }
 
     if (currentMode === 'area') {
-      const areaCode = document.getElementById('sel-area').value;
-      const areaObj  = (appData?.areas || []).find(a => a.code === areaCode);
+      const areaCode  = document.getElementById('sel-area').value;
+      const areaObj   = (appData?.areas || []).find(a => a.code === areaCode);
       const areaCount = areaObj
         ? (areaObj.enviavel ?? areaObj.count ?? areaObj.total ?? null)
         : null;
@@ -611,11 +620,12 @@
       if (areaCode && areaCount !== null) {
         enviavel.textContent = fmt(areaCount);
         label.textContent    = 'Enviáveis (área)';
+        batches.textContent  = calcBatches(areaCount);
       } else {
         enviavel.textContent = areaCode ? '—' : fmt(stats.enviavel);
         label.textContent    = 'Enviáveis';
+        batches.textContent  = areaCode ? '—' : '1';
       }
-      batches.textContent = '1';
     } else {
       enviavel.textContent = fmt(stats.enviavel);
       label.textContent    = 'Enviáveis';
@@ -674,12 +684,25 @@
     } else {
       const areaObj   = (appData?.areas || []).find(a => a.code === area);
       const areaCount = areaObj ? (areaObj.enviavel ?? areaObj.count ?? areaObj.total ?? null) : null;
-      const countStr  = areaCount !== null ? ` (<strong>~${areaCount.toLocaleString('pt-PT')} contactos</strong>)` : '';
-      summary.innerHTML = `
-        Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada apenas para
-        contactos da área <strong>${areaName}</strong>${countStr}.
-        Envio único, sem batches.
-      `;
+      const areaBat   = areaCount !== null ? calcBatches(areaCount) : 1;
+      const countStr  = areaCount !== null ? `<strong>~${areaCount.toLocaleString('pt-PT')} contactos</strong>` : 'contactos';
+
+      if (areaBat > 1) {
+        const perBatch = Math.ceil(areaCount / areaBat).toLocaleString('pt-PT');
+        summary.innerHTML = `
+          Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada para
+          ${countStr} da área <strong>${areaName}</strong>
+          em <strong>${areaBat} batches de ~${perBatch}</strong>,
+          com <strong>${hours}h de intervalo</strong> entre cada envio.
+          Duração total estimada: <strong>${hours * (areaBat - 1)}h a ${hours * areaBat}h</strong>.
+        `;
+      } else {
+        summary.innerHTML = `
+          Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada apenas para
+          ${countStr} da área <strong>${areaName}</strong>.
+          Envio único, sem batches.
+        `;
+      }
     }
   }
 
