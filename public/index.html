@@ -418,7 +418,7 @@
       </div>
     </div>
     <div id="stats-area-note" style="display:none;margin-top:12px;font-size:12px;color:var(--muted);background:rgba(45,110,247,.04);border:1px solid rgba(45,110,247,.1);border-radius:6px;padding:8px 12px;line-height:1.5;">
-      A contagem de enviáveis por área não está disponível neste momento. O serviço de automação não retorna esse detalhe — os números acima reflectem o total global.
+      A actualizar contagens para a área seleccionada…
     </div>
   </div>
 
@@ -448,7 +448,7 @@
     <!-- Área (só visível em modo area) -->
     <div id="area-group" class="select-wrap">
       <label for="sel-area">Área de Formação</label>
-      <select id="sel-area" onchange="updateSummary()">
+      <select id="sel-area" onchange="onAreaChange()">
         <option value="">Seleccionar área...</option>
       </select>
     </div>
@@ -519,8 +519,12 @@
     selCampaign.innerHTML = '<option value="">A carregar campanhas...</option>';
 
     try {
-      // Passo 1 — ligar ao n8n
-      const r = await fetch('/api/data');
+      // Passo 1 — ligar ao serviço
+      const r = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'broadcast', area: '' })
+      });
       if (!r.ok) throw new Error(`Servidor respondeu com erro ${r.status}`);
 
       stepDone('step-connect');
@@ -583,28 +587,58 @@
     document.getElementById('btn-broadcast').classList.toggle('active', mode === 'broadcast');
     document.getElementById('btn-area').classList.toggle('active', mode === 'area');
     document.getElementById('area-group').classList.toggle('visible', mode === 'area');
+
+    if (mode === 'broadcast') {
+      loadAreaStats('broadcast', '');
+    } else {
+      const area = document.getElementById('sel-area').value;
+      if (area) loadAreaStats('area', area);
+      else { refreshStats(); updateSummary(); }
+    }
+  }
+
+  // ─── Re-fetch stats silencioso ao mudar modo/área ──────────────────────
+  async function loadAreaStats(mode, area) {
+    const note = document.getElementById('stats-area-note');
+    note.style.display = 'block';
+    note.textContent   = 'A actualizar contagens…';
+
+    try {
+      const r = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode, area })
+      });
+      if (!r.ok) throw new Error('Erro ' + r.status);
+      const data = await r.json();
+      if (!data.ok) throw new Error(data.error || 'Erro');
+
+      appData.stats = data.stats;
+      note.style.display = 'none';
+    } catch (err) {
+      note.textContent = 'Não foi possível actualizar as contagens.';
+    }
+
     refreshStats();
     updateSummary();
   }
 
-  // ─── Calcular nº de batches para um dado count ─────────────────────────
-  function calcBatches(count) {
-    const stats     = appData?.stats || {};
-    const bcastEnv  = stats.enviavel || 0;
-    const bcastBat  = stats.batches  || 1;
-    const batchSize = bcastEnv > 0 ? Math.ceil(bcastEnv / bcastBat) : 9999;
-    return Math.max(1, Math.ceil(count / batchSize));
+  // ─── Área seleccionada pelo utilizador ─────────────────────────────────
+  function onAreaChange() {
+    const area = document.getElementById('sel-area').value;
+    if (area) loadAreaStats('area', area);
+    else { refreshStats(); updateSummary(); }
   }
 
-  // ─── Refrescar stats em função do modo e área ──────────────────────────
+  // ─── Refrescar stats com os dados actuais de appData.stats ─────────────
   function refreshStats() {
     const stats    = appData?.stats || {};
     const testMode = document.getElementById('chk-test-mode')?.checked;
     const fmt      = n => (n || 0).toLocaleString('pt-PT');
 
-    const enviavel  = document.getElementById('stat-enviavel');
-    const label     = document.getElementById('stat-enviavel-label');
-    const batches   = document.getElementById('stat-batches');
+    const enviavel = document.getElementById('stat-enviavel');
+    const label    = document.getElementById('stat-enviavel-label');
+    const batches  = document.getElementById('stat-batches');
 
     if (testMode) {
       enviavel.textContent = fmt(stats.test_enviavel) + (stats.test_approx ? '+' : '');
@@ -614,21 +648,9 @@
     }
 
     if (currentMode === 'area') {
-      const areaCode  = document.getElementById('sel-area').value;
-      const areaObj   = (appData?.areas || []).find(a => a.code === areaCode);
-      const areaCount = areaObj
-        ? (areaObj.enviavel ?? areaObj.count ?? areaObj.total ?? null)
-        : null;
-
-      if (areaCode && areaCount !== null) {
-        enviavel.textContent = fmt(areaCount);
-        label.textContent    = 'Enviáveis (área)';
-        batches.textContent  = calcBatches(areaCount);
-      } else {
-        enviavel.textContent = fmt(stats.enviavel);
-        label.textContent    = 'Enviáveis';
-        batches.textContent  = '1';
-      }
+      enviavel.textContent = fmt(stats.enviavel);
+      label.textContent    = 'Enviáveis (área)';
+      batches.textContent  = stats.batches || 1;
     } else {
       enviavel.textContent = fmt(stats.enviavel);
       label.textContent    = 'Enviáveis';
@@ -685,24 +707,23 @@
         Duração total estimada: <strong>${hours * (batches - 1)}h a ${hours * batches}h</strong>.
       `;
     } else {
-      const areaObj   = (appData?.areas || []).find(a => a.code === area);
-      const areaCount = areaObj ? (areaObj.enviavel ?? areaObj.count ?? areaObj.total ?? null) : null;
-      const areaBat   = areaCount !== null ? calcBatches(areaCount) : 1;
-      const countStr  = areaCount !== null ? `<strong>~${areaCount.toLocaleString('pt-PT')} contactos</strong>` : 'contactos';
+      const enviavel = appData?.stats?.enviavel || 0;
+      const batches  = appData?.stats?.batches  || 1;
+      const countStr = enviavel ? `<strong>~${enviavel.toLocaleString('pt-PT')} contactos</strong>` : 'contactos';
 
-      if (areaCount !== null && areaBat > 1) {
-        const perBatch = Math.ceil(areaCount / areaBat).toLocaleString('pt-PT');
+      if (batches > 1) {
+        const perBatch = Math.ceil(enviavel / batches).toLocaleString('pt-PT');
         summary.innerHTML = `
           Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada para
           ${countStr} da área <strong>${areaName}</strong>
-          em <strong>${areaBat} batches de ~${perBatch}</strong>,
+          em <strong>${batches} batches de ~${perBatch}</strong>,
           com <strong>${hours}h de intervalo</strong> entre cada envio.
-          Duração total estimada: <strong>${hours * (areaBat - 1)}h a ${hours * areaBat}h</strong>.
+          Duração total estimada: <strong>${hours * (batches - 1)}h a ${hours * batches}h</strong>.
         `;
       } else {
         summary.innerHTML = `
           Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada apenas para
-          contactos da área <strong>${areaName}</strong>${areaCount !== null ? ` (~${areaCount.toLocaleString('pt-PT')} contactos)` : ''}.
+          ${countStr} da área <strong>${areaName}</strong>.
           Envio único, sem batches.
         `;
       }

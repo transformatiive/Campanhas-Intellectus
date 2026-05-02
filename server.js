@@ -12,10 +12,16 @@ const N8N_BASE = 'https://trnsf.up.railway.app';
 const DATA_WEBHOOK  = `${N8N_BASE}/webhook/intellectus-campaigns-data`;
 const SEND_WEBHOOK  = `${N8N_BASE}/webhook/intellectus-campaigns-send`;
 
-// GET /api/data — busca campanhas, listas e áreas via n8n
-app.get('/api/data', async (req, res) => {
+// POST /api/data — busca campanhas, áreas e stats (filtrados por área se fornecida)
+app.post('/api/data', async (req, res) => {
+  const { mode, area } = req.body || {};
   try {
-    const r = await fetch(DATA_WEBHOOK, { timeout: 30000 });
+    const r = await fetch(DATA_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: mode || 'broadcast', area: area || '' }),
+      timeout: 30000
+    });
     const data = await r.json();
     res.json(data);
   } catch (err) {
