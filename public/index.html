@@ -687,12 +687,14 @@
 
   // ─── Enviar campanha ────────────────────────────────────────────────────
   async function sendCampaign() {
-    const campaign_id   = document.getElementById('sel-campaign').value;
-    const list_key      = document.getElementById('sel-list').value;
+    const campaign_key  = document.getElementById('sel-campaign').value;
     const area          = document.getElementById('sel-area').value;
     const hours_between = parseInt(document.getElementById('inp-hours').value) || 3;
     const test_mode     = document.getElementById('chk-test-mode').checked;
-    const campaignName  = document.getElementById('sel-campaign').selectedOptions[0]?.text.split('—')[0].trim();
+
+    const selectedCampaign = (appData.campaigns || []).find(c => c.id === campaign_key) || {};
+    const campaignName = selectedCampaign.name || '';
+    const subject      = selectedCampaign.subject || campaignName;
 
     document.getElementById('btn-send').disabled = true;
     showFeedback('loading', 'A iniciar envio…', `A processar o pedido para a campanha <strong>${campaignName}</strong>. Aguarde um momento.`);
@@ -701,14 +703,27 @@
       const r = await fetch('/api/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaign_id, list_key, mode: currentMode, area, hours_between, test_mode })
+        body: JSON.stringify({
+          campaign_key,
+          campaign_name: campaignName,
+          subject,
+          mode: currentMode,
+          area,
+          hours_between,
+          test_mode
+        })
       });
       const data = await r.json();
 
       if (data.ok) {
+        const modeLabel = test_mode
+          ? '🧪 Modo de teste (apenas contactos com Temp_Campaign = true)'
+          : currentMode === 'broadcast'
+            ? 'Broadcast (toda a base)'
+            : `Área: ${document.getElementById('sel-area').selectedOptions[0]?.text || area}`;
         showFeedback('success', '✅ Campanha iniciada com sucesso',
           `O workflow de envio está a correr em segundo plano.<br>
-           <strong>Modo:</strong> ${currentMode === 'broadcast' ? 'Broadcast (toda a base)' : `Área: ${document.getElementById('sel-area').selectedOptions[0]?.text}`}<br>
+           <strong>Modo:</strong> ${modeLabel}<br>
            <strong>Campanha:</strong> ${campaignName}<br>
            Pode fechar esta janela — o envio continua automaticamente.`);
       } else {
