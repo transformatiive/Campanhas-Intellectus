@@ -410,7 +410,7 @@
       </div>
       <div class="stat">
         <div class="stat-value" id="stat-enviavel">—</div>
-        <div class="stat-label">Enviáveis</div>
+        <div class="stat-label" id="stat-enviavel-label">Enviáveis</div>
       </div>
       <div class="stat">
         <div class="stat-value" id="stat-batches">—</div>
@@ -584,17 +584,42 @@
     updateSummary();
   }
 
-  // ─── Refrescar stats em função do modo de teste ─────────────────────────
+  // ─── Refrescar stats em função do modo e área ──────────────────────────
   function refreshStats() {
     const stats    = appData?.stats || {};
     const testMode = document.getElementById('chk-test-mode')?.checked;
     const fmt      = n => (n || 0).toLocaleString('pt-PT');
+
+    const enviavel  = document.getElementById('stat-enviavel');
+    const label     = document.getElementById('stat-enviavel-label');
+    const batches   = document.getElementById('stat-batches');
+
     if (testMode) {
-      document.getElementById('stat-enviavel').textContent = fmt(stats.test_enviavel) + (stats.test_approx ? '+' : '');
-      document.getElementById('stat-batches').textContent  = stats.test_batches || 1;
+      enviavel.textContent = fmt(stats.test_enviavel) + (stats.test_approx ? '+' : '');
+      label.textContent    = 'Enviáveis';
+      batches.textContent  = stats.test_batches || 1;
+      return;
+    }
+
+    if (currentMode === 'area') {
+      const areaCode = document.getElementById('sel-area').value;
+      const areaObj  = (appData?.areas || []).find(a => a.code === areaCode);
+      const areaCount = areaObj
+        ? (areaObj.enviavel ?? areaObj.count ?? areaObj.total ?? null)
+        : null;
+
+      if (areaCode && areaCount !== null) {
+        enviavel.textContent = fmt(areaCount);
+        label.textContent    = 'Enviáveis (área)';
+      } else {
+        enviavel.textContent = areaCode ? '—' : fmt(stats.enviavel);
+        label.textContent    = 'Enviáveis';
+      }
+      batches.textContent = '1';
     } else {
-      document.getElementById('stat-enviavel').textContent = fmt(stats.enviavel);
-      document.getElementById('stat-batches').textContent  = currentMode === 'broadcast' ? (stats.batches || '—') : '1';
+      enviavel.textContent = fmt(stats.enviavel);
+      label.textContent    = 'Enviáveis';
+      batches.textContent  = stats.batches || '—';
     }
   }
 
@@ -647,9 +672,12 @@
         Duração total estimada: <strong>${hours * (batches - 1)}h a ${hours * batches}h</strong>.
       `;
     } else {
+      const areaObj   = (appData?.areas || []).find(a => a.code === area);
+      const areaCount = areaObj ? (areaObj.enviavel ?? areaObj.count ?? areaObj.total ?? null) : null;
+      const countStr  = areaCount !== null ? ` (<strong>~${areaCount.toLocaleString('pt-PT')} contactos</strong>)` : '';
       summary.innerHTML = `
         Campanha <strong>${campaignName.split('—')[0].trim()}</strong> enviada apenas para
-        contactos da área <strong>${areaName}</strong>.
+        contactos da área <strong>${areaName}</strong>${countStr}.
         Envio único, sem batches.
       `;
     }
